@@ -83,3 +83,187 @@ export const deleteBlog=async(req,res)=>{
         
     }
   }
+
+
+  export const likeBlog = async (req, res) => {
+    try {
+        const { blogId } = req.body;
+        const userId = req.userData._id; 
+
+       
+        if (!blogId) {
+            return sendErrorResponse(res, [], "blogId is required.", 400);
+        }
+
+       
+        const blog = await BlogModel.findById(blogId);
+        if (!blog) {
+            return sendErrorResponse(res, [], "Blog not found.", 404);
+        }
+
+        
+        const isLiked = blog.likes.includes(userId);
+        if (isLiked) {
+            
+            blog.likes = blog.likes.filter(id => id.toString() !== userId.toString());
+        } else {
+          
+            blog.likes.push(userId);
+        }
+
+        await blog.save();
+
+        return sendSuccessResponse(res, blog, isLiked ? "Blog unliked successfully." : "Blog liked successfully.", 200);
+
+    } catch (error) {
+        return sendErrorResponse(res, [], error.message, 500);
+    }
+};
+
+export const createComment = async (req, res) => {
+    try {
+        const { blogId, text } = req.body;
+        const userId = req.userData._id; 
+
+       
+        if (!blogId || !text) {
+            return sendErrorResponse(res, [], "blogId and text are required.", 400);
+        }
+
+        
+        const blog = await BlogModel.findById(blogId);
+        if (!blog) {
+            return sendErrorResponse(res, [], "Blog not found.", 404);
+        }
+
+       
+        const newComment = new CommentModel({
+            blog: blogId,
+            user: userId,
+            text
+        });
+
+        await newComment.save();
+
+      
+        blog.comments.push({ user: userId, text });
+        await blog.save();
+
+        return sendSuccessResponse(res, newComment, "Comment added successfully.", 201);
+
+    } catch (error) {
+        return sendErrorResponse(res, [], error.message, 500);
+    }
+};
+
+export const replyToComment = async (req, res) => {
+    try {
+        const { commentId, text } = req.body;
+        const userId = req.userData._id; // Assuming user is authenticated
+
+        // Validate request data
+        if (!commentId || !text) {
+            return sendErrorResponse(res, [], "commentId and text are required.", 400);
+        }
+
+        // Check if the parent comment exists
+        const parentComment = await CommentModel.findById(commentId);
+        if (!parentComment) {
+            return sendErrorResponse(res, [], "Parent comment not found.", 404);
+        }
+
+        // Create the reply comment
+        const newReply = new CommentModel({
+            blog: parentComment.blog, // Associate reply with the same blog
+            user: userId,
+            text
+        });
+
+        await newReply.save();
+
+        // Add reply ID to parent comment's `replies` array
+        parentComment.replies.push(newReply._id);
+        await parentComment.save();
+
+        return sendSuccessResponse(res, newReply, "Reply added successfully.", 201);
+
+    } catch (error) {
+        return sendErrorResponse(res, [], error.message, 500);
+    }
+};
+
+
+export const likeComment = async (req, res) => {
+    try {
+        const { commentId } = req.body;
+        const userId = req.userData._id; // Authenticated user ID
+
+        if (!commentId) {
+            return sendErrorResponse(res, [], "commentId is required.", 400);
+        }
+
+        // Find the comment
+        const comment = await CommentModel.findById(commentId);
+        if (!comment) {
+            return sendErrorResponse(res, [], "Comment not found.", 404);
+        }
+
+        // Check if the user already liked the comment
+        const isLiked = comment.likes.includes(userId);
+
+        if (isLiked) {
+            // Unlike the comment
+            comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+        } else {
+            // Like the comment
+            comment.likes.push(userId);
+        }
+
+        await comment.save();
+
+        return sendSuccessResponse(res, comment, isLiked ? "Comment unliked." : "Comment liked.", 200);
+    } catch (error) {
+        return sendErrorResponse(res, [], error.message, 500);
+    }
+};
+
+export const deleteComment = async (req, res) => {
+    try {
+        const { commentId } = req.body;
+        const userId = req.userData._id; // Authenticated user ID
+
+        if (!commentId) {
+            return sendErrorResponse(res, [], "commentId is required.", 400);
+        }
+
+        // Find the comment
+        const comment = await CommentModel.findById(commentId).populate("blog");
+        if (!comment) {
+            return sendErrorResponse(res, [], "Comment not found.", 404);
+        }
+
+        // Get the blog author ID
+        const blog = await BlogModel.findById(comment.blog);
+        if (!blog) {
+            return sendErrorResponse(res, [], "Blog not found.", 404);
+        }
+        const blogAuthorId = blog.author.toString();
+
+        // Check if the user is either the comment owner or the blog author
+        if (comment.user.toString() !== userId.toString() && blogAuthorId !== userId.toString()) {
+            return sendErrorResponse(res, [], "You are not authorized to delete this comment.", 403);
+        }
+
+        // Delete the comment
+        await CommentModel.findByIdAndDelete(commentId);
+
+        // Remove the comment ID from the blog's comments array
+        await BlogModel.updateOne({ _id: blog._id }, { $pull: { comments: commentId } });
+
+        return sendSuccessResponse(res, [], "Comment deleted successfully.", 200);
+    } catch (error) {
+        return sendErrorResponse(res, [], error.message, 500);
+    }
+};
+
+

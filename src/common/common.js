@@ -43,9 +43,9 @@ export const updateByCondition = async (Model, condition, content) => {
 //const projection = { name: 1, email: 1 }; // Only fetch the 'name' and 'email' fields
 
 
-export const getById = async (Model, _id, projection) => {
+export const getById = async (Model, _id,) => {
     try {
-        const data = await Model.findById(_id, projection).lean();
+        const data = await Model.findById(_id).lean();
         return data;
     } catch (error) {
         return false;
