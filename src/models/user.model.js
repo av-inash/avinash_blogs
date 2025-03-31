@@ -8,7 +8,7 @@ const userSchema=new mongoose.Schema({
     },
     email:{
         type:String,
-        required:email,
+        required:true,
         unique:true
     },
     profilePicture: {
@@ -21,6 +21,7 @@ const userSchema=new mongoose.Schema({
     },
     accessToken:{
         type:String,
+        default:""
     },
    
     isBlock:{

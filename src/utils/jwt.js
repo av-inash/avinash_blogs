@@ -4,7 +4,7 @@ dotenv.config()
 
 
 
-export const generateJwtToken = async(data, time) => {
+export const generateJwtToken = (data, time) => {
     const secretKey = process.env.SECRET_KEY;
     try {
         let token;

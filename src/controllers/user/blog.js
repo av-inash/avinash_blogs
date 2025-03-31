@@ -1,7 +1,8 @@
 import HttpStatus from "http-status-codes"
-import { sendErrorResponse,sendSuccessResponse } from "../../responses/response"
-import BlogModel from "../../models/blog.model" 
+import { sendErrorResponse,sendSuccessResponse } from "../../responses/response.js"
+import BlogModel from "../../models/blog.model.js" 
 import *as commonService from"../../common/common.js"
+import CommentModel from "../../models/comment.model.js"
 
 export const createBlog=async(req,res)=>{
     try {
@@ -159,14 +160,14 @@ export const createComment = async (req, res) => {
 export const replyToComment = async (req, res) => {
     try {
         const { commentId, text } = req.body;
-        const userId = req.userData._id; // Assuming user is authenticated
+        const userId = req.userData._id;
 
-        // Validate request data
+        
         if (!commentId || !text) {
             return sendErrorResponse(res, [], "commentId and text are required.", 400);
         }
 
-        // Check if the parent comment exists
+       
         const parentComment = await CommentModel.findById(commentId);
         if (!parentComment) {
             return sendErrorResponse(res, [], "Parent comment not found.", 404);
@@ -174,14 +175,13 @@ export const replyToComment = async (req, res) => {
 
         // Create the reply comment
         const newReply = new CommentModel({
-            blog: parentComment.blog, // Associate reply with the same blog
+            blog: parentComment.blog, 
             user: userId,
             text
         });
 
         await newReply.save();
 
-        // Add reply ID to parent comment's `replies` array
         parentComment.replies.push(newReply._id);
         await parentComment.save();
 
@@ -196,26 +196,26 @@ export const replyToComment = async (req, res) => {
 export const likeComment = async (req, res) => {
     try {
         const { commentId } = req.body;
-        const userId = req.userData._id; // Authenticated user ID
+        const userId = req.userData._id;
 
         if (!commentId) {
             return sendErrorResponse(res, [], "commentId is required.", 400);
         }
 
-        // Find the comment
+        
         const comment = await CommentModel.findById(commentId);
         if (!comment) {
             return sendErrorResponse(res, [], "Comment not found.", 404);
         }
 
-        // Check if the user already liked the comment
+        
         const isLiked = comment.likes.includes(userId);
 
         if (isLiked) {
-            // Unlike the comment
+            
             comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
         } else {
-            // Like the comment
+            
             comment.likes.push(userId);
         }
 
@@ -230,34 +230,34 @@ export const likeComment = async (req, res) => {
 export const deleteComment = async (req, res) => {
     try {
         const { commentId } = req.body;
-        const userId = req.userData._id; // Authenticated user ID
+        const userId = req.userData._id; 
 
         if (!commentId) {
             return sendErrorResponse(res, [], "commentId is required.", 400);
         }
 
-        // Find the comment
+        
         const comment = await CommentModel.findById(commentId).populate("blog");
         if (!comment) {
             return sendErrorResponse(res, [], "Comment not found.", 404);
         }
 
-        // Get the blog author ID
+       
         const blog = await BlogModel.findById(comment.blog);
         if (!blog) {
             return sendErrorResponse(res, [], "Blog not found.", 404);
         }
         const blogAuthorId = blog.author.toString();
 
-        // Check if the user is either the comment owner or the blog author
+       
         if (comment.user.toString() !== userId.toString() && blogAuthorId !== userId.toString()) {
             return sendErrorResponse(res, [], "You are not authorized to delete this comment.", 403);
         }
 
-        // Delete the comment
+      
         await CommentModel.findByIdAndDelete(commentId);
 
-        // Remove the comment ID from the blog's comments array
+       
         await BlogModel.updateOne({ _id: blog._id }, { $pull: { comments: commentId } });
 
         return sendSuccessResponse(res, [], "Comment deleted successfully.", 200);

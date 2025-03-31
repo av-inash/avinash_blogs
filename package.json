@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.779.0",
     "bcrypt": "^5.1.1",
     "celebrate": "^15.0.3",
     "dotenv": "^16.4.7",
@@ -19,6 +20,8 @@
     "http-status-codes": "^2.3.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.1",
+    "multer": "^1.4.5-lts.2",
+    "multer-s3": "^3.0.1",
     "nodemon": "^3.1.9"
   }
 }

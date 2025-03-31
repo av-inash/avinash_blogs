@@ -30,5 +30,16 @@ export const verifyUserToken = async (req, res, next) => {
   }
 };
 
+export const verifyToken = ({ token, key }) => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, key, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(JSON.parse(JSON.stringify(decoded)));
+      }
+    });
+  });
+};
 
 
